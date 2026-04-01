@@ -138,13 +138,10 @@ calorie_dict = {
 # -----------------------------
 MODEL_PATH="best.pt"
 
-@st.cache_resource
 def load_model():
     from ultralytics import YOLO
-    import os
 
-    MODEL_PATH = os.path.join(os.getcwd(), "best.pt")
-    model = YOLO(MODEL_PATH)
+    model = YOLO("yolov8n.pt")  # default working model
 
     return model
 
