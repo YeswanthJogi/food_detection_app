@@ -138,11 +138,11 @@ calorie_dict = {
 # -----------------------------
 MODEL_PATH="best.pt"
 
+import torch
+
+@st.cache_resource
 def load_model():
-    from ultralytics import YOLO
-
-    model = YOLO("best.pt")
-
+    model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
     return model
 
 model = load_model()
