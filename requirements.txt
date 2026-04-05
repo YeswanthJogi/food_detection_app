@@ -1,5 +1,7 @@
 streamlit
-ultralytics
-opencv-python-headless==4.8.1.78
 torch==2.0.1
 torchvision==0.15.2
+Pillow
+numpy
+pandas
+matplotlib

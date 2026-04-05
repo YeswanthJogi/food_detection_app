@@ -138,12 +138,11 @@ calorie_dict = {
 # -----------------------------
 MODEL_PATH="best.pt"
 
-import streamlit as st
-from ultralytics import YOLO
+import torch
 
 @st.cache_resource
 def load_model():
-    model = YOLO("best.pt")   # ONLY this
+    model = torch.hub.load('ultralytics/yolov5', 'yolov5n', pretrained=True)
     return model
 
 model = load_model()
@@ -167,26 +166,26 @@ if uploaded_file:
         image.save(temp.name)
         temp_path=temp.name
 
-    results = model.predict(
-        source=temp_path,
-        conf=confidence,
-        save=False
-    )
+   results = model(image)
 
-    result = results[0]
-    plotted = result.plot()
+results.render()  # draw boxes
+plotted = results.ims[0]
 
     with col2:
         st.subheader("🎯 Detection Output")
         st.image(plotted[:,:,::-1],use_container_width=True)
 
-    names=model.names
-    detections=[]
+    detections = []
 
-    if result.boxes is not None and len(result.boxes)>0:
+df_results = results.pandas().xyxy[0]
 
-        cls_ids=result.boxes.cls.cpu().numpy().astype(int)
-        confs=result.boxes.conf.cpu().numpy()
+if not df_results.empty:
+
+    for _, row in df_results.iterrows():
+        detections.append({
+            "Food Item": row['name'],
+            "Confidence": round(float(row['confidence']),3)
+        })
 
         for c,conf_score in zip(cls_ids,confs):
             detections.append({
