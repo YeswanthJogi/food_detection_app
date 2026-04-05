@@ -109,7 +109,7 @@ calorie_dict = {
 # -----------------------------
 @st.cache_resource
 def load_model():
-    return YOLO("yolov8n.pt")   # use small model (no errors)
+    return YOLO("yolov8n.pt")
 
 model = load_model()
 
