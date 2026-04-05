@@ -142,7 +142,7 @@ import torch
 
 @st.cache_resource
 def load_model():
-    model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+    model = torch.hub.load('ultralytics/yolov5', 'yolov5n', pretrained=True)
     return model
 
 model = load_model()
