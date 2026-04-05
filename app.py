@@ -141,7 +141,7 @@ MODEL_PATH="best.pt"
 def load_model():
     from ultralytics import YOLO
 
-    model = YOLO("yolov8n.pt")  # default working model
+    model = YOLO("best.pt")
 
     return model
 
