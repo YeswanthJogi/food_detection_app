@@ -107,13 +107,12 @@ calorie_dict = {
 # -----------------------------
 # Load Model (SAFE VERSION)
 # -----------------------------
+import torch
+
 @st.cache_resource
 def load_model():
-    import sys
-    sys.modules['cv2'] = None   # 🔥 BLOCK cv2 (IMPORTANT)
-
-    from ultralytics import YOLO
-    return YOLO("yolov8n.pt")
+    model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+    return model
 
 model = load_model()
 
@@ -129,9 +128,13 @@ if uploaded_file:
     with col1:
         st.image(image, caption="Uploaded Image")
 
-    results = model.predict(image, conf=confidence)
+    
+    results = model(image)
 
-    plotted = results[0].plot()
+    results.render()
+    output_image = results.ims[0]
+
+   st.image(output_image, caption="Detection Output", use_container_width=True)
 
     with col2:
         st.image(plotted[:, :, ::-1], caption="Detection Output")
