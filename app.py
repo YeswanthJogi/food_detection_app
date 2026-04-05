@@ -138,11 +138,12 @@ calorie_dict = {
 # -----------------------------
 MODEL_PATH="best.pt"
 
-import torch
+import streamlit as st
+from ultralytics import YOLO
 
 @st.cache_resource
 def load_model():
-    model = torch.hub.load('ultralytics/yolov5', 'yolov5n', pretrained=True)
+    model = YOLO("best.pt")   # ONLY this
     return model
 
 model = load_model()
