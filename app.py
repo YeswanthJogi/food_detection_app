@@ -1,10 +1,8 @@
 import streamlit as st
 from PIL import Image
-import numpy as np
 import pandas as pd
-import tempfile
-import os
 import matplotlib.pyplot as plt
+from ultralytics import YOLO
 
 st.set_page_config(
     page_title="Food Detection and Calorie Estimation",
@@ -13,11 +11,10 @@ st.set_page_config(
 )
 
 # -----------------------------
-# Custom Styling
+# UI Styling (same as yours)
 # -----------------------------
 st.markdown("""
 <style>
-
 .title {
 font-size:42px;
 font-weight:800;
@@ -27,14 +24,12 @@ background: linear-gradient(90deg,#ff416c,#ff4b2b,#ffb347);
 -webkit-text-fill-color:transparent;
 margin-bottom:5px;
 }
-
 .subtitle {
 text-align:center;
 font-size:18px;
 color:#8aa0b4;
 margin-bottom:5px;
 }
-
 .banner {
 background:linear-gradient(135deg,#1f4037,#99f2c8);
 padding:12px;
@@ -46,7 +41,6 @@ color:black;
 margin-top:10px;
 margin-bottom:20px;
 }
-
 .card{
 background:linear-gradient(135deg,#667eea,#764ba2);
 padding:10px;
@@ -55,7 +49,6 @@ text-align:center;
 color:white;
 margin-bottom:8px;
 }
-
 .sidebar-title{
 font-size:22px;
 font-weight:700;
@@ -63,7 +56,6 @@ text-align:center;
 margin-bottom:10px;
 color:#ff7a18;
 }
-
 .sidebar-box{
 background:linear-gradient(135deg,#1c1c1c,#2c3e50);
 padding:10px;
@@ -72,7 +64,6 @@ margin-bottom:10px;
 color:white;
 text-align:center;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -87,42 +78,22 @@ unsafe_allow_html=True
 )
 
 # -----------------------------
-# Sidebar (Clean Control Panel)
+# Sidebar
 # -----------------------------
 st.sidebar.markdown('<div class="sidebar-title">⚙ Detection Settings</div>', unsafe_allow_html=True)
 
-st.sidebar.markdown(
-'<div class="sidebar-box">Adjust confidence level for detection</div>',
-unsafe_allow_html=True
-)
+confidence = st.sidebar.slider("Confidence Threshold", 0.0, 1.0, 0.25)
 
-confidence = st.sidebar.slider(
-    "Confidence Threshold",
-    0.0,1.0,0.25,0.01
-)
+uploaded_file = st.sidebar.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
 
-st.sidebar.markdown("### 📷 Upload Food Image")
-
-uploaded_file = st.sidebar.file_uploader(
-    "Browse Image",
-    type=["jpg","jpeg","png"],
-    label_visibility="collapsed"
-)
-
-st.sidebar.caption("Supported formats: JPG • JPEG • PNG")
-
-# -----------------------------
-# Banner (Before Upload)
-# -----------------------------
 if uploaded_file is None:
-
     st.markdown(
-    '<div class="banner">📷 Upload a food image using the sidebar to start food detection</div>',
+    '<div class="banner">📷 Upload a food image using the sidebar to start detection</div>',
     unsafe_allow_html=True
     )
 
 # -----------------------------
-# Calorie Dataset
+# Calories
 # -----------------------------
 calorie_dict = {
     "apple":95,
@@ -134,149 +105,74 @@ calorie_dict = {
 }
 
 # -----------------------------
-# Load YOLO Model
+# Load Model (SAFE VERSION)
 # -----------------------------
-MODEL_PATH="best.pt"
-
-import torch
-
 @st.cache_resource
 def load_model():
-    model = torch.hub.load('ultralytics/yolov5', 'yolov5n', pretrained=True)
-    return model
+    return YOLO("yolov8n.pt")   # use small model (no errors)
 
 model = load_model()
 
 # -----------------------------
-# Detection (After Upload)
+# Detection
 # -----------------------------
 if uploaded_file:
 
-    st.subheader("🔍 Food Detection Results")
-
     image = Image.open(uploaded_file).convert("RGB")
 
-    col1,col2 = st.columns(2)
+    col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("📷 Uploaded Image")
-        st.image(image,use_container_width=True)
+        st.image(image, caption="Uploaded Image")
 
-    with tempfile.NamedTemporaryFile(delete=False,suffix=".jpg") as temp:
-        image.save(temp.name)
-        temp_path=temp.name
+    results = model.predict(image, conf=confidence)
 
-   results = model(image)
-
-results.render()  # draw boxes
-plotted = results.ims[0]
+    plotted = results[0].plot()
 
     with col2:
-        st.subheader("🎯 Detection Output")
-        st.image(plotted[:,:,::-1],use_container_width=True)
+        st.image(plotted[:, :, ::-1], caption="Detection Output")
 
+    names = model.names
     detections = []
 
-df_results = results.pandas().xyxy[0]
+    if results[0].boxes is not None:
 
-if not df_results.empty:
+        cls_ids = results[0].boxes.cls.cpu().numpy().astype(int)
+        confs = results[0].boxes.conf.cpu().numpy()
 
-    for _, row in df_results.iterrows():
-        detections.append({
-            "Food Item": row['name'],
-            "Confidence": round(float(row['confidence']),3)
-        })
-
-        for c,conf_score in zip(cls_ids,confs):
+        for c, conf_score in zip(cls_ids, confs):
             detections.append({
-                "Food Item":names[c],
-                "Confidence":round(float(conf_score),3)
+                "Food Item": names[c],
+                "Confidence": round(float(conf_score), 3)
             })
 
-        df=pd.DataFrame(detections)
+        df = pd.DataFrame(detections)
 
-        # -----------------------------
-        # Detected Food Items
-        # -----------------------------
-        st.subheader("🍎 Detected Food Items")
+        st.subheader("Detected Items")
+        st.dataframe(df)
 
         counts = df["Food Item"].value_counts()
-        foods = list(counts.index)
 
-        for i in range(0,len(foods),3):
-
-            cols = st.columns(3)
-
-            for j in range(3):
-
-                if i+j < len(foods):
-
-                    food = foods[i+j]
-                    count = counts[food]
-
-                    avg_conf = df[df["Food Item"]==food]["Confidence"].mean()*100
-
-                    with cols[j]:
-
-                        st.markdown(f"""
-                        <div class="card">
-                        <h4>{food.capitalize()}</h4>
-                        <h3>{count} item(s)</h3>
-                        <p>{avg_conf:.1f}% confidence</p>
-                        </div>
-                        """,unsafe_allow_html=True)
-
-        # -----------------------------
-        # Nutrition Table
-        # -----------------------------
-        st.subheader("📊 Nutrition Table")
-
-        nutrition=[]
-
-        for food,count in counts.items():
-
-            calories = calorie_dict.get(food,50)
-
+        nutrition = []
+        for food, count in counts.items():
+            cal = calorie_dict.get(food, 50)
             nutrition.append({
-                "Food Item":food,
-                "Count":count,
-                "Calories":calories*count
+                "Food Item": food,
+                "Count": count,
+                "Calories": cal * count
             })
 
-        nutrition_df=pd.DataFrame(nutrition)
+        nutrition_df = pd.DataFrame(nutrition)
 
-        st.dataframe(nutrition_df,use_container_width=True)
+        st.subheader("Nutrition")
+        st.dataframe(nutrition_df)
 
-        # -----------------------------
-        # Total Calories
-        # -----------------------------
-        total_calories=nutrition_df["Calories"].sum()
+        total = nutrition_df["Calories"].sum()
+        st.success(f"🔥 Total Calories: {total} kcal")
 
-        st.markdown(
-        f"<h2 style='color:#ff4b2b'>🔥 Total Estimated Calories: {total_calories} kcal</h2>",
-        unsafe_allow_html=True
-        )
-
-        # -----------------------------
-        # Pie Chart
-        # -----------------------------
-        st.subheader("🥧 Calorie Distribution")
-
-        fig,ax=plt.subplots()
-
-        ax.pie(
-            nutrition_df["Calories"],
-            labels=nutrition_df["Food Item"],
-            autopct="%1.1f%%",
-            startangle=90,
-            colors=plt.cm.Set3.colors
-        )
-
-        ax.axis("equal")
-
+        fig, ax = plt.subplots()
+        ax.pie(nutrition_df["Calories"], labels=nutrition_df["Food Item"], autopct="%1.1f%%")
         st.pyplot(fig)
 
     else:
-        st.warning("No food items detected.")
-
-    os.remove(temp_path)
+        st.warning("No objects detected")
