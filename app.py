@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 from ultralytics import YOLO
 
 st.set_page_config(
-    page_title="Food Detection and Calorie Estimation",
-    page_icon="🍽️",
-    layout="wide"
+page_title="Food Detection and Calorie Estimation",
+page_icon="🍽️",
+layout="wide"
 )
 
 # -----------------------------
@@ -87,21 +87,21 @@ confidence = st.sidebar.slider("Confidence Threshold", 0.0, 1.0, 0.25)
 uploaded_file = st.sidebar.file_uploader("Upload Image", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is None:
-    st.markdown(
-    '<div class="banner">📷 Upload a food image using the sidebar to start detection</div>',
-    unsafe_allow_html=True
-    )
+st.markdown(
+'<div class="banner">📷 Upload a food image using the sidebar to start detection</div>',
+unsafe_allow_html=True
+)
 
 # -----------------------------
 # Calories
 # -----------------------------
 calorie_dict = {
-    "apple":95,
-    "banana":105,
-    "grape":3,
-    "orange":62,
-    "pizza":285,
-    "burger":354
+"apple":95,
+"banana":105,
+"grape":3,
+"orange":62,
+"pizza":285,
+"burger":354
 }
 
 # -----------------------------
@@ -111,75 +111,75 @@ import torch
 
 @st.cache_resource
 def load_model():
-    model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
-    return model
+model = torch.hub.load('ultralytics/yolov5', 'yolov5s', pretrained=True)
+return model
 
 model = load_model()
 
 # -----------------------------
 # Detection
 # -----------------------------
-if uploaded_file:
+if uploaded_file:   
 
-    image = Image.open(uploaded_file).convert("RGB")
+image = Image.open(uploaded_file).convert("RGB")
 
-    col1, col2 = st.columns(2)
+col1, col2 = st.columns(2)
 
-    with col1:
-        st.image(image, caption="Uploaded Image")
+with col1:
+    st.image(image, caption="Uploaded Image")
 
-    
-    results = model(image)
 
-    results.render()
-    output_image = results.ims[0]
+results = model(image)
 
-   st.image(output_image, caption="Detection Output", use_container_width=True)
+results.render()
+output_image = results.ims[0]
 
-    with col2:
-        st.image(plotted[:, :, ::-1], caption="Detection Output")
+st.image(output_image, caption="Detection Output", use_container_width=True)
 
-    names = model.names
-    detections = []
+with col2:
+    st.image(plotted[:, :, ::-1], caption="Detection Output")
 
-    if results[0].boxes is not None:
+names = model.names
+detections = []
 
-        cls_ids = results[0].boxes.cls.cpu().numpy().astype(int)
-        confs = results[0].boxes.conf.cpu().numpy()
+if results[0].boxes is not None:
 
-        for c, conf_score in zip(cls_ids, confs):
-            detections.append({
-                "Food Item": names[c],
-                "Confidence": round(float(conf_score), 3)
-            })
+    cls_ids = results[0].boxes.cls.cpu().numpy().astype(int)
+    confs = results[0].boxes.conf.cpu().numpy()
 
-        df = pd.DataFrame(detections)
+    for c, conf_score in zip(cls_ids, confs):
+        detections.append({
+            "Food Item": names[c],
+            "Confidence": round(float(conf_score), 3)
+        })
 
-        st.subheader("Detected Items")
-        st.dataframe(df)
+    df = pd.DataFrame(detections)
 
-        counts = df["Food Item"].value_counts()
+    st.subheader("Detected Items")
+    st.dataframe(df)
 
-        nutrition = []
-        for food, count in counts.items():
-            cal = calorie_dict.get(food, 50)
-            nutrition.append({
-                "Food Item": food,
-                "Count": count,
-                "Calories": cal * count
-            })
+    counts = df["Food Item"].value_counts()
 
-        nutrition_df = pd.DataFrame(nutrition)
+    nutrition = []
+    for food, count in counts.items():
+        cal = calorie_dict.get(food, 50)
+        nutrition.append({
+            "Food Item": food,
+            "Count": count,
+            "Calories": cal * count
+        })
 
-        st.subheader("Nutrition")
-        st.dataframe(nutrition_df)
+    nutrition_df = pd.DataFrame(nutrition)
 
-        total = nutrition_df["Calories"].sum()
-        st.success(f"🔥 Total Calories: {total} kcal")
+    st.subheader("Nutrition")
+    st.dataframe(nutrition_df)
 
-        fig, ax = plt.subplots()
-        ax.pie(nutrition_df["Calories"], labels=nutrition_df["Food Item"], autopct="%1.1f%%")
-        st.pyplot(fig)
+    total = nutrition_df["Calories"].sum()
+    st.success(f"🔥 Total Calories: {total} kcal")
 
-    else:
-        st.warning("No objects detected")
+    fig, ax = plt.subplots()
+    ax.pie(nutrition_df["Calories"], labels=nutrition_df["Food Item"], autopct="%1.1f%%")
+    st.pyplot(fig)
+
+else:
+    st.warning("No objects detected")
