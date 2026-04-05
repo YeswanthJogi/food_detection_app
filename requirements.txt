@@ -1,7 +1,9 @@
 streamlit
-torch
-torchvision
+ultralytics
+opencv-python-headless
 pillow
 matplotlib
 pandas
 numpy
+torch==2.0.1
+torchvision==0.15.2
