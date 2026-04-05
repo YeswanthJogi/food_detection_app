@@ -109,9 +109,11 @@ calorie_dict = {
 # -----------------------------
 @st.cache_resource
 def load_model():
+    import sys
+    sys.modules['cv2'] = None   # 🔥 BLOCK cv2 (IMPORTANT)
+
     from ultralytics import YOLO
-    model = YOLO("yolov8n.pt")
-    return model
+    return YOLO("yolov8n.pt")
 
 model = load_model()
 
