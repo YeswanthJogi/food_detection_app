@@ -111,10 +111,12 @@ calorie_dict = {
 # -----------------------------
 # Load Model (SAFE VERSION)
 # -----------------------------
+import torch
+
 @st.cache_resource
 def load_model():
-    from ultralytics import YOLO
-    return YOLO("yolov8n.pt")   # 🔥 IMPORTANT CHANGE (no best.pt)
+    model = torch.hub.load('ultralytics/yolov5', 'yolov5n', pretrained=True)
+    return model
 
 # -----------------------------
 # Main Logic
@@ -140,15 +142,14 @@ if uploaded_file is not None:
     model = load_model()
 
     # Prediction
-    results = model.predict(source=temp_path, conf=confidence)
+    results = model(img_array)
 
-    result = results[0]
-    plotted = result.plot()
+    results.render()   # draw boxes
+    output_image = results.ims[0]
 
     with col2:
         st.subheader("🎯 Detection Output")
-        st.image(plotted[:, :, ::-1], use_container_width=True)
-
+        st.image(output_image, caption="Detection Output", use_container_width=True)
     names = model.names
     detections = []
 
