@@ -115,7 +115,14 @@ import torch
 
 @st.cache_resource
 def load_model():
-    model = torch.hub.load('ultralytics/yolov5', 'yolov5n', pretrained=True)
+    import torch
+    model = torch.hub.load(
+        'ultralytics/yolov5',
+        'yolov5n',
+        pretrained=True,
+        trust_repo=True
+    )
+    model.eval()
     return model
 
 # -----------------------------
@@ -139,7 +146,8 @@ if uploaded_file is not None:
         temp_path = temp.name
 
     # Load model only when needed
-    model = load_model()
+    with st.spinner("⏳ Loading model... please wait (first time only)"):
+     model = load_model()
 
     # Prediction
     results = model(img_array)
